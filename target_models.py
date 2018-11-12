@@ -134,44 +134,6 @@ class Target:
 		sess.close() 
 
 
-	# run inference on the inference network Q(z | X)
-	def infer(self, data):
-		x = tf.placeholder("float", [None, self.n_input])
-		q_mu, q_sigma = self.inference_network(x=x)
-
-		saver = tf.train.Saver()
-
-		sess = tf.Session()
-		saver.restore(sess, "/tmp/model.ckpt")
-
-		mu, sig = sess.run([q_mu, q_sigma], feed_dict={x: data})
-
-		sess.close()
-
-		return mu, sig
-
-
-	# run inference on the generative network P(X | z)
-	def generate(self):
-		z = tf.placeholder(tf.float32, shape=[None, self.latent_dim])
-
-		X_samples, _ = self.generative_network(z)
-
-		saver = tf.train.Saver()
-
-		sess = tf.Session()
-
-		saver.restore(sess, "/tmp/model.ckpt")
-
-		#mu, sig = 
-		xsamp = sess.run(X_samples, feed_dict={z: np.random.randn(16, self.latent_dim)})
-
-		fig = plot(xsamp)
-		plt.savefig('out/{}.png'.format(str(0).zfill(3)), bbox_inches='tight')
-		plt.close(fig)
-
-		sess.close()
-
 
 
 mnist = input_data.read_data_sets('../../MNIST_data', one_hot=True)
