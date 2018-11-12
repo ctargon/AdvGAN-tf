@@ -126,7 +126,7 @@ class Target:
 
 		total_test_batch = int(dataset.test.num_examples / self.batch_size)
 		for i in range(total_test_batch):
-			batch_x, batch_y = dataset.test.next_batch(self.batch_size, i)
+			batch_x, batch_y = dataset.test.next_batch(self.batch_size)
 			#batch_x = dataset.train.permute(batch_x, idxs)
 			accs.append(accuracy.eval({x: batch_x, y: batch_y}, session=sess))
 
