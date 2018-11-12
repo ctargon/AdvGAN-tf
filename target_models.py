@@ -117,7 +117,7 @@ class Target:
 			print("Epoch:", '%04d' % (epoch), "cost=", "{:.9f}".format(avg_cost))
 
 		# Test model
-		correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+		correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(y, 1))
 
 		# Calculate accuracy
 		accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
