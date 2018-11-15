@@ -94,6 +94,8 @@ def AdvGAN(X, y, batch_size=128):
 
 	g_saver = tf.train.Saver(g_vars)
 
+	d_saver = tf.train.Saver(d_vars)
+
 	init  = tf.global_variables_initializer()
 
 	sess  = tf.Session()
@@ -101,7 +103,7 @@ def AdvGAN(X, y, batch_size=128):
 
 	saver.restore(sess, "./weights/target_model/model.ckpt")
 
-	for i in range(5000):
+	for i in range(50):
 		# ------------------------------------------------------------------------------
 		# train the discriminator first on real and generated images
 		real_image_inp = X[np.random.randint(0, X.shape[0], size=int(batch_size / 2)),:,:,:]
@@ -133,7 +135,8 @@ def AdvGAN(X, y, batch_size=128):
 		if i % 10 == 0:
 			print('generator loss: ' + str(gl))
 
-	saver.save(sess, "weights/generator/gen.ckpt")
+	g_saver.save(sess, "weights/generator/gen.ckpt")
+	d_saver.save(sess, "weights/discriminator/disc.ckpt")
 
 
 def attack(X, y):
@@ -143,12 +146,15 @@ def attack(X, y):
 
 	x_perturbed = x_pl + perturb
 
+	d_perturb_logits, d_perturb_probs = discriminator(x_perturbed)
+
 	f = target_model()
 	f_real_logits, f_real_probs = f.ModelC(x_pl)
 	f_fake_logits, f_fake_probs = f.ModelC(x_perturbed)
 
 	t_vars = tf.trainable_variables()
 	f_vars = [var for var in t_vars if 'ModelC' in var.name]
+	d_vars = [var for var in t_vars if 'd_' in var.name]
 	g_vars = [var for var in t_vars if 'g_' in var.name]
 
 	init  = tf.global_variables_initializer()
@@ -158,8 +164,10 @@ def attack(X, y):
 
 	f_saver = tf.train.Saver(f_vars)
 	g_saver = tf.train.Saver(g_vars)
+	d_saver = tf.train.Saver(d_vars)
 	# f_saver.restore(sess, "./weights/target_model/model.ckpt")
 	g_saver.restore(sess, "./weights/generator/gen.ckpt")
+	# d_saver.restore(sess, "weights/discriminator/disc.ckpt")
 
 	# p, xp, real_l, fake_l = sess.run([perturb, x_perturbed, f_real_probs, f_fake_probs], \
 									# feed_dict={x_pl: X})
