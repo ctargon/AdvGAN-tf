@@ -133,7 +133,7 @@ def AdvGAN(X, y, batch_size=128):
 		if i % 10 == 0:
 			print('generator loss: ' + str(gl))
 
-	saver.save(sess, "weights/generator/gen")
+	saver.save(sess, "weights/generator/gen.ckpt")
 
 
 def attack(X, y):
@@ -159,7 +159,7 @@ def attack(X, y):
 	f_saver = tf.train.Saver(f_vars)
 	g_saver = tf.train.Saver(g_vars)
 	# f_saver.restore(sess, "./weights/target_model/model.ckpt")
-	g_saver.restore(sess, "./weights/generator/gen")
+	g_saver.restore(sess, "./weights/generator/gen.ckpt")
 
 	# p, xp, real_l, fake_l = sess.run([perturb, x_perturbed, f_real_probs, f_fake_probs], \
 									# feed_dict={x_pl: X})
