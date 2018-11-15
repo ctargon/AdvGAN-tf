@@ -60,7 +60,7 @@ def AdvGAN(X, y, batch_size=128):
 	d_out_logits, d_out_probs = discriminator(disc_batch_x)
 	d_perturb_logits, d_perturb_probs = discriminator(x_perturbed)
 
-	f_out_logits, f_out_probs = f.ModelC(x_real_pl)
+	f_out_logits, f_out_probs = f.ModelC(x_perturbed)
 
 	
 	# generate labels for discriminator
@@ -117,19 +117,21 @@ def AdvGAN(X, y, batch_size=128):
 		if i % 10 == 0:
 			print('discriminator loss: ' + str(dl))
 
-		# ------------------------------------------------------------------------------
-		# train the generator for perturbed images using loss for discriminator, adversarial, and hinge
-		random_samples = np.random.randint(0, X.shape[0], size=int(batch_size))
-		fake_image_inp = X[random_samples,...]
-		y_discrim = np.ones([batch_size,1])
-		target_class = y[random_samples]
+		# train the generator 5x (test)
+		for _ in range(5):
+			# ------------------------------------------------------------------------------
+			# train the generator for perturbed images using loss for discriminator, adversarial, and hinge
+			random_samples = np.random.randint(0, X.shape[0], size=int(batch_size))
+			fake_image_inp = X[random_samples,...]
+			y_discrim = np.ones([batch_size,1])
+			target_class = y[random_samples]
 
-		_, gl = sess.run([g_opt, g_loss], feed_dict={x_fake_pl: fake_image_inp, \
-													 d_labels_pl: y_discrim, \
-													 y_hinge_pl: np.zeros((batch_size, 28, 28, 1)), \
-													 t: target_class})
+			_, gl = sess.run([g_opt, g_loss], feed_dict={x_fake_pl: fake_image_inp, \
+														 d_labels_pl: y_discrim, \
+														 y_hinge_pl: np.zeros((batch_size, 28, 28, 1)), \
+														 t: target_class})
 		if i % 10 == 0:
-			print('discriminator loss: ' + str(gl))
+			print('generator loss: ' + str(gl))
 
 	saver.save(sess, "weights/generator/gen")
 
