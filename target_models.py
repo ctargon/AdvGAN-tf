@@ -16,12 +16,14 @@ from tensorflow.examples.tutorials.mnist import input_data
 
 
 class Target:
-	def __init__(self, lr=0.001, epochs=50, n_input=28, n_classes=10, batch_size=16):
+	def __init__(self, lr=0.001, epochs=50, n_input=28, n_classes=10, batch_size=16,\
+					restore=0):
 		self.lr = lr
 		self.epochs = epochs
 		self.n_input = 28
 		self.n_classes = 10
 		self.batch_size = batch_size
+		self.restore = restore
 
 		os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -32,7 +34,7 @@ class Target:
 	#	x: input data sample
 	#	h_hidden: LIST of num. neurons per hidden layer
 	def ModelC(self, x):
-		with tf.variable_scope('ModelC'):
+		with tf.variable_scope('ModelC', reuse=tf.AUTO_REUSE):
 			input_layer = tf.reshape(x, [-1, 28, 28, 1])
 
 			conv1 = tf.layers.conv2d(
@@ -136,9 +138,9 @@ class Target:
 
 
 
-mnist = input_data.read_data_sets('../../MNIST_data', one_hot=True)
-cnn = Target()
-cnn.train(mnist)
+# mnist = input_data.read_data_sets('../../MNIST_data', one_hot=True)
+# cnn = Target()
+# cnn.train(mnist)
 
 
 

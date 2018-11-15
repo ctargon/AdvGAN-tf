@@ -39,13 +39,13 @@ def TransConvInstNormRelu(x, filters, kernel_size=3, strides=2):
 # in the same style as ConvInstNormRelu
 def ResBlock(x, filters=32, kernel_size=3, strides=1):
 	b1 = ConvInstNormRelu(x, filters=filters, kernel_size=kernel_size, strides=strides)
-	b2 = ConvInstNormRelu(b2, filters=filters, kernel_size=kernel_size, strides=strides)
+	b2 = ConvInstNormRelu(b1, filters=filters, kernel_size=kernel_size, strides=strides)
 
 	return x + b2
 
 
 def generator(x):
-	with tf.variable_scope('Generator'):
+	with tf.variable_scope('g_weights'):
 		input_layer = tf.reshape(x, [-1, 28, 28, 1])
 
 		# define first three conv + inst + relu layers
