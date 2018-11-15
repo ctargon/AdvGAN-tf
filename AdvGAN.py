@@ -158,15 +158,15 @@ def attack(X, y):
 
 	f_saver = tf.train.Saver(f_vars)
 	g_saver = tf.train.Saver(g_vars)
-	f_saver.restore(sess, "./weights/target_model/model.ckpt")
-	# g_saver.restore(sess, "./weights/generator/gen")
+	# f_saver.restore(sess, "./weights/target_model/model.ckpt")
+	g_saver.restore(sess, "./weights/generator/gen")
 
 	# p, xp, real_l, fake_l = sess.run([perturb, x_perturbed, f_real_probs, f_fake_probs], \
 									# feed_dict={x_pl: X})
-	real_l = sess.run(f_real_probs, \
+	real_l = sess.run(x_perturbed, \
 									feed_dict={x_pl: X})
-	print(np.argmax(y, axis=1))
-	print(np.argmax(real_l, axis=1))
+	# print(np.argmax(y, axis=1))
+	print(real_l.shape)
 	# print(np.argmax(fake_l, axis=1))
 
 	# print(p.shape)
@@ -181,9 +181,9 @@ X = np.divide(X, 255.0)
 X = X.reshape(X.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 
-AdvGAN(X, y, batch_size=128)
-# rs = np.random.randint(0, X.shape[0], 10)
-# attack(X[rs,...], y[rs,...])
+# AdvGAN(X, y, batch_size=128)
+rs = np.random.randint(0, X.shape[0], 8)
+attack(X[rs,...], y[rs,...])
 
 
 
