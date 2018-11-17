@@ -66,7 +66,7 @@ def generator(x):
 		# final layer block
 		out = ConvInstNormRelu(u2, filters=1, kernel_size=3, strides=1)
 
-		return out
+		return tf.nn.tanh(out)
 
 
 
