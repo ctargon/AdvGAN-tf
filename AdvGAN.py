@@ -24,9 +24,9 @@ def mse_loss(preds, labels):
 	return tf.reduce_mean(tf.square(preds - labels))
 
 def adv_loss(preds, labels):
-	real = tf.reduce_sum((labels) * preds, 1)
+	real = tf.reduce_sum(labels * preds, 1)
 	other = tf.reduce_max((1 - labels) * preds - (labels * 10000), 1)
-	return tf.reduce_sum(tf.maximum(0.0, other - real + .01))
+	return tf.reduce_sum(tf.maximum(0.0, real - other + .01))
 
 def hinge_loss(preds, labels, c):
 	preds = tf.cast(preds, tf.float32)
@@ -64,8 +64,8 @@ def AdvGAN(X, y, batch_size=128):
 	
 	# generate labels for discriminator (optionally smooth labels for stability)
 	smooth = 0.0
-	d_labels_real = tf.ones_like(d_real_logits) * (1 - smooth)
-	d_labels_fake = tf.zeros_like(d_fake_logits)
+	d_labels_real = tf.ones_like(d_real_probs) * (1 - smooth)
+	d_labels_fake = tf.zeros_like(d_fake_probs)
 
 	#-----------------------------------------------------------------------------------
 	# LOSS DEFINITIONS
@@ -73,7 +73,7 @@ def AdvGAN(X, y, batch_size=128):
 	d_loss_fake = tf.losses.mean_squared_error(predictions=d_fake_probs, labels=d_labels_fake)
 	d_loss = d_loss_real + d_loss_fake
 
-	g_loss_fake = tf.losses.mean_squared_error(predictions=f_real_probs, labels=tf.ones_like(f_fake_probs))
+	g_loss_fake = tf.losses.mean_squared_error(predictions=d_fake_probs, labels=tf.ones_like(d_fake_probs))
 
 	l_hinge = hinge_loss(perturb, y_hinge_pl, 0.3)
 
@@ -201,9 +201,9 @@ X = np.divide(X, 255.0)
 X = X.reshape(X.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 
-AdvGAN(X, y, batch_size=128)
+# AdvGAN(X, y, batch_size=128)
 # rs = np.random.randint(0, X.shape[0], 8)
-# attack(X[0:8,...], y[0:8,...])
+attack(X[0:8,...], y[0:8,...])
 
 
 
