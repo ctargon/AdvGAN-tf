@@ -12,12 +12,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
-from tensorflow.examples.tutorials.mnist import input_data
+import random
 
 from generator import generator
 from discriminator import discriminator
 from target_models import Target as target_model
 
+def shuffle(X, Y):
+	rands = random.sample(xrange(X.shape[0]),X.shape[0])
+	return X[rands], Y[rands]
+
+def next_batch(X, Y, i, batch_size):
+	idx = i * batch_size
+	idx_n = i * batch_size + batch_size
+	return X[idx:idx_n], Y[idx:idx_n]
 
 
 def mse_loss(preds, labels):
@@ -28,7 +36,7 @@ def adv_loss(preds, labels):
 	other = tf.reduce_max((1 - labels) * preds - (labels * 10000), 1)
 	return tf.reduce_sum(tf.maximum(0.0, real - other + .01))
 
-def hinge_loss(preds, labels, c):
+def perturb_loss(preds, labels, c):
 	preds = tf.cast(preds, tf.float32)
 	labels = tf.cast(labels, tf.float32)
 	return tf.reduce_sum(tf.maximum(0.0,tf.abs(preds-tf.tanh(labels)/2)-c))
@@ -36,7 +44,7 @@ def hinge_loss(preds, labels, c):
 
 
 
-def AdvGAN(X, y, batch_size=128):
+def AdvGAN(X, y, epochs=50, batch_size=128):
 	x_pl = tf.placeholder(tf.float32, [None, 28, 28, 1]) # image placeholder
 	y_hinge_pl = tf.placeholder(tf.float32, [None, 28, 28, 1])
 	t = tf.placeholder(tf.float32, [None, 10]) # target placeholder
@@ -75,13 +83,13 @@ def AdvGAN(X, y, batch_size=128):
 
 	g_loss_fake = tf.losses.mean_squared_error(predictions=d_fake_probs, labels=tf.ones_like(d_fake_probs))
 
-	l_hinge = hinge_loss(perturb, y_hinge_pl, 0.3)
+	l_perturb = perturb_loss(perturb, y_hinge_pl, 0.3)
 
 	l_adv = adv_loss(f_fake_probs, t)
 
 	alpha = 10
 	beta = 1
-	g_loss = g_loss_fake + alpha*l_adv + beta*l_hinge 
+	g_loss = g_loss_fake + alpha*l_adv + beta*l_perturb 
 
 	# ----------------------------------------------------------------------------------
 	# gather variables for training/restoring
@@ -94,9 +102,7 @@ def AdvGAN(X, y, batch_size=128):
 	g_opt = tf.train.AdamOptimizer().minimize(g_loss, var_list=g_vars)
 
 	saver = tf.train.Saver(f_vars)
-
 	g_saver = tf.train.Saver(g_vars)
-
 	d_saver = tf.train.Saver(d_vars)
 
 	init  = tf.global_variables_initializer()
@@ -106,41 +112,50 @@ def AdvGAN(X, y, batch_size=128):
 
 	saver.restore(sess, "./weights/target_model/model.ckpt")
 
-	for i in range(500):
-		for _ in range(1):
-			# ------------------------------------------------------------------------------
-			# train the discriminator first on real and generated images
-			real_image_inp = X[np.random.randint(0, X.shape[0], size=batch_size),:,:,:]
+	total_batches = X.shape[0] / batch_size
 
-			_, dl = sess.run([d_opt, d_loss], feed_dict={x_pl: real_image_inp})
+	for epoch in range(epochs):
 
-			if i % 10 == 0:
-				print('discriminator loss: ' + str(dl))
+		X, y = shuffle(X, y)
+		loss_D_sum = 0.0
+		loss_G_fake_sum = 0.0
+		loss_perturb_sum = 0.0
+		loss_adv_sum = 0.0
 
-		# train the generator 5x (test)
-		for _ in range(1):
-			# ------------------------------------------------------------------------------
-			# train the generator for perturbed images using loss for discriminator, adversarial, and hinge
-			random_samples = np.random.randint(0, X.shape[0], size=int(batch_size))
-			fake_image_inp = X[random_samples,...]
-			y_discrim = np.ones([batch_size,1])
-			target_class = y[random_samples]
+		for i in range(total_batches):
 
-			_, gl, pert, rawpert = sess.run([g_opt, g_loss, x_perturbed, perturb], \
-														feed_dict={x_pl: fake_image_inp, \
-														 y_hinge_pl: np.zeros((batch_size, 28, 28, 1)), \
-														 t: target_class})
+			batch_x, batch_y = next_batch(X, y, i, batch_size)
 
-		if i % 10 == 0:
-			print('generator loss: ' + str(gl))
-			# pert, fake_l, real_l = sess.run([x_perturbed, f_out_probs, f_real_probs], feed_dict={x_fake_pl: fake_image_inp})
-			# print('LA: ' + str(np.argmax(target_class, axis=1)))
-			# print('OG: ' + str(np.argmax(real_l, axis=1)))
-			# print('PB: ' + str(np.argmax(fake_l, axis=1)))
-			# plt.imshow(np.squeeze(pert[0]), cmap='Greys_r')
-			# plt.show(block=False)
-			# plt.pause(3)
-			# plt.close()
+			# train the discriminator first n times
+			for _ in range(1):
+				_, loss_D_batch = sess.run([d_opt, d_loss], feed_dict={x_pl: batch_x})
+
+			# train the generator n times
+			for _ in range(1):
+				_, loss_G_fake_batch, loss_adv_batch, loss_perturb_batch = \
+									sess.run([g_opt, g_loss_fake, l_adv, l_perturb], \
+												feed_dict={x_pl: batch_x, \
+														   y_hinge_pl: np.zeros((batch_size, 28, 28, 1)), \
+														   t: batch_y})
+		loss_D_sum += loss_D_batch
+		loss_G_fake_sum += loss_G_fake_batch
+		loss_perturb_sum += loss_perturb_batch
+		loss_adv_sum += loss_adv_batch
+
+		print("epoch %d:\nloss_D: %.3f, loss_G_fake: %.3f, \
+				\nloss_perturb: %.3f, loss_adv: %.3f, \n" %
+				(epoch, loss_D_sum/total_batches, loss_G_fake_sum/total_batches,
+				loss_perturb_sum/total_batches, loss_adv_sum/total_batches))
+
+		print('discriminator loss: ' + str(dl))
+		# pert, fake_l, real_l = sess.run([x_perturbed, f_out_probs, f_real_probs], feed_dict={x_fake_pl: fake_image_inp})
+		# print('LA: ' + str(np.argmax(target_class, axis=1)))
+		# print('OG: ' + str(np.argmax(real_l, axis=1)))
+		# print('PB: ' + str(np.argmax(fake_l, axis=1)))
+		# plt.imshow(np.squeeze(pert[0]), cmap='Greys_r')
+		# plt.show(block=False)
+		# plt.pause(3)
+		# plt.close()
 
 
 	g_saver.save(sess, "weights/generator/gen.ckpt")
@@ -201,7 +216,7 @@ X = np.divide(X, 255.0)
 X = X.reshape(X.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 
-# AdvGAN(X, y, batch_size=128)
+AdvGAN(X, y, batch_size=128)
 # rs = np.random.randint(0, X.shape[0], 8)
 attack(X[0:8,...], y[0:8,...])
 
