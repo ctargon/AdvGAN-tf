@@ -158,14 +158,9 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 			g_saver.save(sess, "weights/generator/gen.ckpt")
 			d_saver.save(sess, "weights/discriminator/disc.ckpt")
 
-		# pert, fake_l, real_l = sess.run([x_perturbed, f_out_probs, f_real_probs], feed_dict={x_fake_pl: fake_image_inp})
-		# print('LA: ' + str(np.argmax(target_class, axis=1)))
-		# print('OG: ' + str(np.argmax(real_l, axis=1)))
-		# print('PB: ' + str(np.argmax(fake_l, axis=1)))
-		# plt.imshow(np.squeeze(pert[0]), cmap='Greys_r')
-		# plt.show(block=False)
-		# plt.pause(3)
-		# plt.close()
+	print('finished training, saving weights')
+	g_saver.save(sess, "weights/generator/gen.ckpt")
+	d_saver.save(sess, "weights/discriminator/disc.ckpt")
 
 
 
