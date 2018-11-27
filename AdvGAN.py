@@ -18,37 +18,36 @@ from generator import generator
 from discriminator import discriminator
 from target_models import Target as target_model
 
+# randomly shuffle a dataset 
 def shuffle(X, Y):
 	rands = random.sample(xrange(X.shape[0]),X.shape[0])
 	return X[rands], Y[rands]
 
+# get the next batch based on x, y, and the iteration (based on batch_size)
 def next_batch(X, Y, i, batch_size):
 	idx = i * batch_size
 	idx_n = i * batch_size + batch_size
 	return X[idx:idx_n], Y[idx:idx_n]
 
-
-def mse_loss(preds, labels):
-	return tf.reduce_mean(tf.square(preds - labels))
-
+# loss function to encourage misclassification after perturbation
 def adv_loss(preds, labels):
 	real = tf.reduce_sum(labels * preds, 1)
 	other = tf.reduce_max((1 - labels) * preds - (labels * 10000), 1)
 	return tf.reduce_sum(tf.maximum(0.0, real - other + .01))
 
+# loss function to influence the perturbation to be as close to 0 as possible
 def perturb_loss(preds, labels, c):
 	preds = tf.cast(preds, tf.float32)
 	labels = tf.cast(labels, tf.float32)
 	return tf.reduce_sum(tf.maximum(0.0,tf.abs(preds-tf.tanh(labels)/2)-c))
 
 
-
-
+# function that defines ops, graphs, and training procedure for AdvGAN framework
 def AdvGAN(X, y, epochs=50, batch_size=128):
+	# placeholder definitions
 	x_pl = tf.placeholder(tf.float32, [None, 28, 28, 1]) # image placeholder
 	y_hinge_pl = tf.placeholder(tf.float32, [None, 28, 28, 1])
 	t = tf.placeholder(tf.float32, [None, 10]) # target placeholder
-
 
 	#-----------------------------------------------------------------------------------
 	# MODEL DEFINITIONS
@@ -77,16 +76,21 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 
 	#-----------------------------------------------------------------------------------
 	# LOSS DEFINITIONS
+	# discriminator loss
 	d_loss_real = tf.losses.mean_squared_error(predictions=d_real_probs, labels=d_labels_real)
 	d_loss_fake = tf.losses.mean_squared_error(predictions=d_fake_probs, labels=d_labels_fake)
 	d_loss = d_loss_real + d_loss_fake
 
+	# generator loss
 	g_loss_fake = tf.losses.mean_squared_error(predictions=d_fake_probs, labels=tf.ones_like(d_fake_probs))
 
+	# perturbation loss (minimize overall perturbation)
 	l_perturb = perturb_loss(perturb, y_hinge_pl, 0.3)
 
+	# adversarial loss (encourage misclassification)
 	l_adv = adv_loss(f_fake_probs, t)
 
+	# weights for generator loss function
 	alpha = 10
 	beta = 1
 	g_loss = g_loss_fake + alpha*l_adv + beta*l_perturb 
@@ -98,9 +102,11 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 	d_vars = [var for var in t_vars if 'd_' in var.name]
 	g_vars = [var for var in t_vars if 'g_' in var.name]
 
+	# define optimizers for discriminator and generator
 	d_opt = tf.train.AdamOptimizer().minimize(d_loss, var_list=d_vars)
 	g_opt = tf.train.AdamOptimizer().minimize(g_loss, var_list=g_vars)
 
+	# create saver objects for the target model, generator, and discriminator
 	saver = tf.train.Saver(f_vars)
 	g_saver = tf.train.Saver(g_vars)
 	d_saver = tf.train.Saver(d_vars)
@@ -110,11 +116,12 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 	sess  = tf.Session()
 	sess.run(init)
 
+	# load the pretrained target model
 	saver.restore(sess, "./weights/target_model/model.ckpt")
 
 	total_batches = X.shape[0] / batch_size
 
-	for epoch in range(epochs):
+	for epoch in range(epochs + 1):
 
 		X, y = shuffle(X, y)
 		loss_D_sum = 0.0
@@ -137,17 +144,20 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 												feed_dict={x_pl: batch_x, \
 														   y_hinge_pl: np.zeros((batch_size, 28, 28, 1)), \
 														   t: batch_y})
-		loss_D_sum += loss_D_batch
-		loss_G_fake_sum += loss_G_fake_batch
-		loss_perturb_sum += loss_perturb_batch
-		loss_adv_sum += loss_adv_batch
+			loss_D_sum += loss_D_batch
+			loss_G_fake_sum += loss_G_fake_batch
+			loss_perturb_sum += loss_perturb_batch
+			loss_adv_sum += loss_adv_batch
 
 		print("epoch %d:\nloss_D: %.3f, loss_G_fake: %.3f, \
 				\nloss_perturb: %.3f, loss_adv: %.3f, \n" %
-				(epoch, loss_D_sum/total_batches, loss_G_fake_sum/total_batches,
+				(epoch + 1, loss_D_sum/total_batches, loss_G_fake_sum/total_batches,
 				loss_perturb_sum/total_batches, loss_adv_sum/total_batches))
 
-		print('discriminator loss: ' + str(dl))
+		if epoch % 10 == 0:
+			g_saver.save(sess, "weights/generator/gen.ckpt")
+			d_saver.save(sess, "weights/discriminator/disc.ckpt")
+
 		# pert, fake_l, real_l = sess.run([x_perturbed, f_out_probs, f_real_probs], feed_dict={x_fake_pl: fake_image_inp})
 		# print('LA: ' + str(np.argmax(target_class, axis=1)))
 		# print('OG: ' + str(np.argmax(real_l, axis=1)))
@@ -158,8 +168,7 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 		# plt.close()
 
 
-	g_saver.save(sess, "weights/generator/gen.ckpt")
-	d_saver.save(sess, "weights/discriminator/disc.ckpt")
+
 
 
 def attack(X, y):
@@ -199,9 +208,6 @@ def attack(X, y):
 	print('OG: ' + str(np.argmax(real_l, axis=1)))
 	print('PB: ' + str(np.argmax(fake_l, axis=1)))
 
-	print('max: ' + str(np.max(rawpert[0])))
-	print('avg: ' + str(np.mean(rawpert[0])))
-
 	plt.imshow(np.squeeze(pert[0]), cmap='Greys_r')
 	plt.show()
 	# print(p.shape)
@@ -211,16 +217,17 @@ def attack(X, y):
 
 
 
-(X,y), (_,_) = mnist.load_data()
+(X,y), (X_test,y_test) = mnist.load_data()
 X = np.divide(X, 255.0)
+X_test = np.divide(X_test, 255.0)
 X = X.reshape(X.shape[0], 28, 28, 1)
+X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
+y_test = to_categorical(y_test, num_classes=10)
 
-AdvGAN(X, y, batch_size=128)
+# AdvGAN(X, y, batch_size=128)
 # rs = np.random.randint(0, X.shape[0], 8)
-attack(X[0:8,...], y[0:8,...])
-
-
+attack(X_test[0:32,...], y_test[0:32,...])
 
 
 
