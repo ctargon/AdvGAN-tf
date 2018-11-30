@@ -37,34 +37,61 @@ def TransConvInstNormRelu(x, filters, kernel_size=3, strides=2):
 
 # helper function for residual block of 2 convolutions with same num filters
 # in the same style as ConvInstNormRelu
-def ResBlock(x, filters=32, kernel_size=3, strides=1):
-	b1 = ConvInstNormRelu(x, filters=filters, kernel_size=kernel_size, strides=strides)
-	b2 = ConvInstNormRelu(b1, filters=filters, kernel_size=kernel_size, strides=strides)
+def ResBlock(x, training, filters=32, kernel_size=3, strides=1):
+	conv1 = tf.layers.conv2d(
+						inputs=x,
+						filters=filters,
+						kernel_size=kernel_size,
+						strides=strides,
+						padding="same",
+						activation=None)
 
-	return x + b2
+	conv1_norm = tf.layers.batch_normalization(conv1_relu, training=training)
+	
+	conv1_relu = tf.nn.relu(conv1)
+
+	conv2 = tf.layers.conv2d(
+						inputs=conv1_norm,
+						filters=filters,
+						kernel_size=kernel_size,
+						strides=strides,
+						padding="same",
+						activation=None)
+
+	conv2_norm = tf.layers.batch_normalization(conv2, training=training)
+
+	return tf.nn.relu(x + conv2_norm)
 
 
-def generator(x):
+def generator(x, training):
 	with tf.variable_scope('g_weights'):
 		input_layer = tf.reshape(x, [-1, 28, 28, 1])
 
 		# define first three conv + inst + relu layers
-		l1 = ConvInstNormRelu(input_layer, filters=8, kernel_size=3, strides=1)
-		l2 = ConvInstNormRelu(l1, filters=16, kernel_size=3, strides=2)
-		l3 = ConvInstNormRelu(l2, filters=32, kernel_size=3, strides=2)
+		c1 = ConvInstNormRelu(input_layer, filters=8, kernel_size=3, strides=1)
+		d1 = ConvInstNormRelu(c1, filters=16, kernel_size=3, strides=2)
+		d2 = ConvInstNormRelu(d1, filters=32, kernel_size=3, strides=2)
 
 		# define residual blocks
-		rb1 = ResBlock(l3, filters=32)
-		rb2 = ResBlock(rb1, filters=32)
-		rb3 = ResBlock(rb2, filters=32)
-		rb4 = ResBlock(rb3, filters=32)
+		rb1 = ResBlock(d2, training, filters=32)
+		rb2 = ResBlock(rb1, training, filters=32)
+		rb3 = ResBlock(rb2, training, filters=32)
+		rb4 = ResBlock(rb3, training, filters=32)
 
 		# upsample using conv transpose
 		u1 = TransConvInstNormRelu(rb4, filters=16, kernel_size=3, strides=2)
 		u2 = TransConvInstNormRelu(u1, filters=8, kernel_size=3, strides=2)
 
 		# final layer block
-		out = ConvInstNormRelu(u2, filters=1, kernel_size=3, strides=1)
+		out = tf.layers.conv2d(
+						inputs=u2,
+						filters=1, # or 3 if RGB image
+						kernel_size=3,
+						strides=1,
+						padding="same",
+						activation=None)
+
+		out = tf.contrib.layers.instance_norm(out)
 
 		return tf.nn.tanh(out)
 
