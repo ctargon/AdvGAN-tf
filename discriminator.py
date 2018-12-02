@@ -6,7 +6,7 @@
 
 import tensorflow as tf
 
-def discriminator(x):
+def discriminator(x, training):
 	with tf.variable_scope('d_weights', reuse=tf.AUTO_REUSE):
 		input_layer = tf.reshape(x, [-1, 28, 28, 1])
 
@@ -28,7 +28,8 @@ def discriminator(x):
 							padding="same",
 							activation=None)
 
-		in1 = tf.contrib.layers.instance_norm(conv2)
+		#in1 = tf.contrib.layers.instance_norm(conv2)
+		in1 = tf.layers.batch_normalization(conv2, training=training)
 		conv2 = tf.nn.leaky_relu(in1, alpha=0.2)
 
 
@@ -40,7 +41,8 @@ def discriminator(x):
 							padding="same",
 							activation=None)
 
-		in2 = tf.contrib.layers.instance_norm(conv3)
+		#in2 = tf.contrib.layers.instance_norm(conv3)
+		in2 = tf.layers.batch_normalization(conv3, training=training)
 		conv3 = tf.nn.leaky_relu(in2, alpha=0.2)
 
 		in2_flatten = tf.contrib.layers.flatten(conv3)

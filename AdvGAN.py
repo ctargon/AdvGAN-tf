@@ -33,7 +33,7 @@ def next_batch(X, Y, i, batch_size):
 def adv_loss(preds, labels):
 	real = tf.reduce_sum(labels * preds, 1)
 	other = tf.reduce_max((1 - labels) * preds - (labels * 10000), 1)
-	return tf.reduce_sum(tf.maximum(0.0, real - other + .01))
+	return tf.reduce_sum(tf.maximum(0.0, real - other))
 
 # loss function to influence the perturbation to be as close to 0 as possible
 def perturb_loss(preds, labels, c):
@@ -64,8 +64,8 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 	x_perturbed = tf.clip_by_value(x_perturbed, 0, 1)
 
 	# pass real and perturbed image to discriminator and the target model
-	d_real_logits, d_real_probs = discriminator(x_pl)
-	d_fake_logits, d_fake_probs = discriminator(x_perturbed)
+	d_real_logits, d_real_probs = discriminator(x_pl, is_training)
+	d_fake_logits, d_fake_probs = discriminator(x_perturbed, is_training)
 	
 	# pass real and perturbed images to the model we are trying to fool
 	f_real_logits, f_real_probs = f.ModelC(x_pl)
@@ -231,8 +231,8 @@ y = to_categorical(y, num_classes=10)
 y_test = to_categorical(y_test, num_classes=10)
 
 AdvGAN(X, y, batch_size=128)
-#rs = np.random.randint(0, X_test.shape[0], 8)
-#attack(X_test[rs,...], y_test[rs,...])
+# rs = np.random.randint(0, X_test.shape[0], 32)
+# attack(X_test[rs,...], y_test[rs,...])
 
 
 
