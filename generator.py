@@ -48,7 +48,7 @@ def ResBlock(x, training, filters=32, kernel_size=3, strides=1):
 
 	# conv1_norm = tf.layers.batch_normalization(conv1, training=training)
 
-	conv1_relu = tf.nn.relu(conv1_norm)
+	conv1_relu = tf.nn.relu(conv1)
 
 	conv2 = tf.layers.conv2d(
 						inputs=conv1_relu,
@@ -60,7 +60,7 @@ def ResBlock(x, training, filters=32, kernel_size=3, strides=1):
 
 	# conv2_norm = tf.layers.batch_normalization(conv2, training=training)
 
-	return tf.nn.relu(x + conv2_norm)
+	return tf.nn.relu(x + conv2)
 
 
 def generator(x, training):
