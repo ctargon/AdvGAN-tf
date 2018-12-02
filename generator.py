@@ -46,12 +46,12 @@ def ResBlock(x, training, filters=32, kernel_size=3, strides=1):
 						padding="same",
 						activation=None)
 
-	conv1_norm = tf.layers.batch_normalization(conv1_relu, training=training)
-	
-	conv1_relu = tf.nn.relu(conv1)
+	conv1_norm = tf.layers.batch_normalization(conv1, training=training)
+
+	conv1_relu = tf.nn.relu(conv1_norm)
 
 	conv2 = tf.layers.conv2d(
-						inputs=conv1_norm,
+						inputs=conv1_relu,
 						filters=filters,
 						kernel_size=kernel_size,
 						strides=strides,
@@ -86,12 +86,12 @@ def generator(x, training):
 		out = tf.layers.conv2d(
 						inputs=u2,
 						filters=1, # or 3 if RGB image
-						kernel_size=3,
+						kernel_size=6,
 						strides=1,
 						padding="same",
 						activation=None)
 
-		out = tf.contrib.layers.instance_norm(out)
+		# out = tf.contrib.layers.instance_norm(out)
 
 		return tf.nn.tanh(out)
 
