@@ -41,7 +41,7 @@ def perturb_loss(preds, labels, c):
 	# labels = tf.cast(labels, tf.float32)
 	# return tf.reduce_sum(tf.maximum(0.0,tf.abs(preds-tf.tanh(labels)/2)-c))
 	#loss_perturb = torch.mean(torch.norm(perturbation.view(perturbation.shape[0], -1), 2, dim=1))
-	return tf.reduce_mean(tf.norm(tf.reshape(tf.shape(preds)[0], -1), axis=1))
+	return tf.reduce_mean(tf.norm(tf.reshape(preds, (tf.shape(preds)[0], -1)), axis=1))
 
 
 # function that defines ops, graphs, and training procedure for AdvGAN framework
@@ -230,9 +230,9 @@ X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 y_test = to_categorical(y_test, num_classes=10)
 
-# AdvGAN(X, y, batch_size=128)
-rs = np.random.randint(0, X_test.shape[0], 8)
-attack(X_test[rs,...], y_test[rs,...])
+AdvGAN(X, y, batch_size=128)
+#rs = np.random.randint(0, X_test.shape[0], 8)
+#attack(X_test[rs,...], y_test[rs,...])
 
 
 
