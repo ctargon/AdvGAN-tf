@@ -37,9 +37,11 @@ def adv_loss(preds, labels):
 
 # loss function to influence the perturbation to be as close to 0 as possible
 def perturb_loss(preds, labels, c):
-	preds = tf.cast(preds, tf.float32)
-	labels = tf.cast(labels, tf.float32)
-	return tf.reduce_sum(tf.maximum(0.0,tf.abs(preds-tf.tanh(labels)/2)-c))
+	# preds = tf.cast(preds, tf.float32)
+	# labels = tf.cast(labels, tf.float32)
+	# return tf.reduce_sum(tf.maximum(0.0,tf.abs(preds-tf.tanh(labels)/2)-c))
+	#loss_perturb = torch.mean(torch.norm(perturbation.view(perturbation.shape[0], -1), 2, dim=1))
+	return tf.reduce_mean(tf.norm(tf.reshape(tf.shape(preds)[0], -1), axis=1))
 
 
 # function that defines ops, graphs, and training procedure for AdvGAN framework
@@ -173,8 +175,9 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 
 def attack(X, y):
 	x_pl = tf.placeholder(tf.float32, [None, 28, 28, 1]) # image placeholder
+	is_training = tf.placeholder(tf.bool, [])
 
-	perturb = generator(x_pl)
+	perturb = generator(x_pl, is_training)
 
 	x_perturbed = x_pl + perturb
 
@@ -227,9 +230,9 @@ X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 y_test = to_categorical(y_test, num_classes=10)
 
-AdvGAN(X, y, batch_size=128)
-# rs = np.random.randint(0, X.shape[0], 8)
-# attack(X_test[0:32,...], y_test[0:32,...])
+# AdvGAN(X, y, batch_size=128)
+rs = np.random.randint(0, X_test.shape[0], 8)
+attack(X_test[rs,...], y_test[rs,...])
 
 
 
