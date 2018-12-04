@@ -36,11 +36,7 @@ def adv_loss(preds, labels):
 	return tf.reduce_sum(tf.maximum(0.0, real - other))
 
 # loss function to influence the perturbation to be as close to 0 as possible
-def perturb_loss(preds, labels, c):
-	# preds = tf.cast(preds, tf.float32)
-	# labels = tf.cast(labels, tf.float32)
-	# return tf.reduce_sum(tf.maximum(0.0,tf.abs(preds-tf.tanh(labels)/2)-c))
-	#loss_perturb = torch.mean(torch.norm(perturbation.view(perturbation.shape[0], -1), 2, dim=1))
+def perturb_loss(preds):
 	return tf.reduce_mean(tf.norm(tf.reshape(preds, (tf.shape(preds)[0], -1)), axis=1))
 
 
@@ -48,7 +44,6 @@ def perturb_loss(preds, labels, c):
 def AdvGAN(X, y, epochs=50, batch_size=128):
 	# placeholder definitions
 	x_pl = tf.placeholder(tf.float32, [None, 28, 28, 1]) # image placeholder
-	y_hinge_pl = tf.placeholder(tf.float32, [None, 28, 28, 1])
 	t = tf.placeholder(tf.float32, [None, 10]) # target placeholder
 	is_training = tf.placeholder(tf.bool, [])
 
@@ -88,7 +83,7 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 	g_loss_fake = tf.losses.mean_squared_error(predictions=d_fake_probs, labels=tf.ones_like(d_fake_probs))
 
 	# perturbation loss (minimize overall perturbation)
-	l_perturb = perturb_loss(perturb, y_hinge_pl, 0.3)
+	l_perturb = perturb_loss(perturb)
 
 	# adversarial loss (encourage misclassification)
 	l_adv = adv_loss(f_fake_probs, t)
@@ -104,6 +99,8 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 	f_vars = [var for var in t_vars if 'ModelC' in var.name]
 	d_vars = [var for var in t_vars if 'd_' in var.name]
 	g_vars = [var for var in t_vars if 'g_' in var.name]
+
+	print(g_vars)
 
 	# define optimizers for discriminator and generator
 	update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -148,7 +145,6 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 				_, loss_G_fake_batch, loss_adv_batch, loss_perturb_batch = \
 									sess.run([g_opt, g_loss_fake, l_adv, l_perturb], \
 												feed_dict={x_pl: batch_x, \
-														   y_hinge_pl: np.zeros((batch_size, 28, 28, 1)), \
 														   t: batch_y, \
 														   is_training: True})
 			loss_D_sum += loss_D_batch
