@@ -15,7 +15,7 @@ def discriminator(x, training):
 							filters=8,
 							kernel_size=4,
 							strides=2,
-							padding="same",
+							padding="valid",
 							activation=None)
 		conv1 = tf.nn.leaky_relu(conv1, alpha=0.2)
 
@@ -25,7 +25,7 @@ def discriminator(x, training):
 							filters=16,
 							kernel_size=4,
 							strides=2,
-							padding="same",
+							padding="valid",
 							activation=None)
 
 		#in1 = tf.contrib.layers.instance_norm(conv2)
@@ -38,16 +38,17 @@ def discriminator(x, training):
 							filters=32,
 							kernel_size=4,
 							strides=2,
-							padding="same",
+							padding="valid",
 							activation=None)
 
 		#in2 = tf.contrib.layers.instance_norm(conv3)
 		in2 = tf.layers.batch_normalization(conv3, training=training)
 		conv3 = tf.nn.leaky_relu(in2, alpha=0.2)
 
-		in2_flatten = tf.contrib.layers.flatten(conv3)
+		logits = tf.squeeze(tf.layers.conv2d(conv3, filters=1, kernel_size=1))
 
-		logits = tf.layers.dense(inputs=in2_flatten, units=1, activation=None)
+		# in2_flatten = tf.contrib.layers.flatten(conv3)
+		# logits = tf.layers.dense(inputs=in2_flatten, units=1, activation=None)
 
 		probs = tf.nn.sigmoid(logits)
 
