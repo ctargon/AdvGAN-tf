@@ -20,7 +20,7 @@ from target_models import Target as target_model
 
 # randomly shuffle a dataset 
 def shuffle(X, Y):
-	rands = random.sample(xrange(X.shape[0]),X.shape[0])
+	rands = random.sample(range(X.shape[0]),X.shape[0])
 	return X[rands], Y[rands]
 
 # get the next batch based on x, y, and the iteration (based on batch_size)
@@ -89,8 +89,8 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 	l_adv = adv_loss(f_fake_probs, t)
 
 	# weights for generator loss function
-	alpha = 10
-	beta = 1
+	alpha = 2.5
+	beta = 1.0
 	g_loss = g_loss_fake + alpha*l_adv + beta*l_perturb 
 
 	# ----------------------------------------------------------------------------------
@@ -99,8 +99,6 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 	f_vars = [var for var in t_vars if 'ModelC' in var.name]
 	d_vars = [var for var in t_vars if 'd_' in var.name]
 	g_vars = [var for var in t_vars if 'g_' in var.name]
-
-	print(g_vars)
 
 	# define optimizers for discriminator and generator
 	update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -121,9 +119,9 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 	# load the pretrained target model
 	saver.restore(sess, "./weights/target_model/model.ckpt")
 
-	total_batches = X.shape[0] / batch_size
+	total_batches = int(X.shape[0] / batch_size)
 
-	for epoch in range(epochs + 1):
+	for epoch in range(1, epochs):
 
 		X, y = shuffle(X, y)
 		loss_D_sum = 0.0
@@ -226,7 +224,7 @@ X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 y_test = to_categorical(y_test, num_classes=10)
 
-AdvGAN(X, y, batch_size=128)
+AdvGAN(X, y, batch_size=128, epochs=100)
 # rs = np.random.randint(0, X_test.shape[0], 32)
 # attack(X_test[rs,...], y_test[rs,...])
 
