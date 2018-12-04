@@ -41,7 +41,7 @@ def perturb_loss(preds):
 
 
 # function that defines ops, graphs, and training procedure for AdvGAN framework
-def AdvGAN(X, y, epochs=50, batch_size=128):
+def AdvGAN(X, y, X_test, y_test, epochs=50, batch_size=128):
 	# placeholder definitions
 	x_pl = tf.placeholder(tf.float32, [None, 28, 28, 1]) # image placeholder
 	t = tf.placeholder(tf.float32, [None, 10]) # target placeholder
@@ -89,7 +89,7 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 	l_adv = adv_loss(f_fake_probs, t)
 
 	# weights for generator loss function
-	alpha = 2.5
+	alpha = 3.0
 	beta = 1.0
 	g_loss = g_loss_fake + alpha*l_adv + beta*l_perturb 
 
@@ -121,7 +121,7 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 
 	total_batches = int(X.shape[0] / batch_size)
 
-	for epoch in range(1, epochs):
+	for epoch in range(0, epochs):
 
 		X, y = shuffle(X, y)
 		loss_D_sum = 0.0
@@ -158,6 +158,17 @@ def AdvGAN(X, y, epochs=50, batch_size=128):
 		if epoch % 10 == 0:
 			g_saver.save(sess, "weights/generator/gen.ckpt")
 			d_saver.save(sess, "weights/discriminator/disc.ckpt")
+
+	correct_prediction = tf.equal(tf.argmax(f_fake_probs, 1), tf.argmax(t, 1))
+	accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+	accs = []
+	total_batches_test = int(X_test.shape[0] / batch_size)
+	for i in range(total_batches_test):
+		batch_x, batch_y = next_batch(X_test, y_test, i, batch_size)
+		acc = sess.run(accuracy, feed_dict={x_pl: batch_x, t: batch_y, is_training: False})
+		accs.append(acc)
+
+	print('accuracy of test set: {}'.format(sum(accs) / len(accs)))
 
 	print('finished training, saving weights')
 	g_saver.save(sess, "weights/generator/gen.ckpt")
@@ -224,7 +235,7 @@ X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 y_test = to_categorical(y_test, num_classes=10)
 
-AdvGAN(X, y, batch_size=128, epochs=100)
+AdvGAN(X, y, X_test, y_test, batch_size=128, epochs=120)
 # rs = np.random.randint(0, X_test.shape[0], 32)
 # attack(X_test[rs,...], y_test[rs,...])
 
