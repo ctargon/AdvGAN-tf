@@ -178,15 +178,14 @@ def AdvGAN(X, y, X_test, y_test, epochs=50, batch_size=128):
 
 
 
-def attack(X, y):
+def attack(X, y, batch_size=128):
 	x_pl = tf.placeholder(tf.float32, [None, 28, 28, 1]) # image placeholder
+	t = tf.placeholder(tf.float32, [None, 10]) # target placeholder
 	is_training = tf.placeholder(tf.bool, [])
 
 	perturb = generator(x_pl, is_training)
-
-	x_perturbed = x_pl + perturb
-
-	d_perturb_logits, d_perturb_probs = discriminator(x_perturbed)
+	x_perturbed = tf.clip_by_value(perturb, -0.3, 0.3) + x_pl
+	x_perturbed = tf.clip_by_value(x_perturbed, 0, 1)
 
 	f = target_model()
 	f_real_logits, f_real_probs = f.ModelC(x_pl)
@@ -207,16 +206,24 @@ def attack(X, y):
 	d_saver = tf.train.Saver(d_vars)
 	f_saver.restore(sess, "./weights/target_model/model.ckpt")
 	g_saver.restore(sess, "./weights/generator/gen.ckpt")
-	# d_saver.restore(sess, "weights/discriminator/disc.ckpt")
 
-	# p, xp, real_l, fake_l = sess.run([perturb, x_perturbed, f_real_probs, f_fake_probs], \
-									# feed_dict={x_pl: X})
 	rawpert, pert, fake_l, real_l = sess.run([perturb, x_perturbed, f_fake_probs, f_real_probs], \
-												feed_dict={x_pl: X, \
+												feed_dict={x_pl: X[:32], \
 														   is_training: False})
-	print('LA: ' + str(np.argmax(y, axis=1)))
+	print('LA: ' + str(np.argmax(y[:32], axis=1)))
 	print('OG: ' + str(np.argmax(real_l, axis=1)))
 	print('PB: ' + str(np.argmax(fake_l, axis=1)))
+
+	correct_prediction = tf.equal(tf.argmax(f_fake_probs, 1), tf.argmax(t, 1))
+	accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+	accs = []
+	total_batches_test = int(X.shape[0] / batch_size)
+	for i in range(total_batches_test):
+		batch_x, batch_y = next_batch(X, y, i, batch_size)
+		acc = sess.run(accuracy, feed_dict={x_pl: batch_x, t: batch_y, is_training: False})
+		accs.append(acc)
+
+	print('accuracy of test set: {}'.format(sum(accs) / len(accs)))
 
 	plt.imshow(np.squeeze(pert[0]), cmap='Greys_r')
 	plt.show()
@@ -224,9 +231,7 @@ def attack(X, y):
 	# plt.imshow(p[1,:,:],cmap="Greys_r")
 
 
-
-
-
+# read in mnist data
 (X,y), (X_test,y_test) = mnist.load_data()
 X = np.divide(X, 255.0)
 X_test = np.divide(X_test, 255.0)
@@ -235,9 +240,8 @@ X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 y_test = to_categorical(y_test, num_classes=10)
 
-AdvGAN(X, y, X_test, y_test, batch_size=128, epochs=120)
-# rs = np.random.randint(0, X_test.shape[0], 32)
-# attack(X_test[rs,...], y_test[rs,...])
+# AdvGAN(X, y, batch_size=128, epochs=100)
+attack(X_test, y_test)
 
 
 
