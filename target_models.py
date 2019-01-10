@@ -9,7 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
-from tensorflow.examples.tutorials.mnist import input_data
+from keras.utils import to_categorical
+from keras.datasets import mnist
 
 
 
@@ -26,6 +27,17 @@ class Target:
 		self.restore = restore
 
 		os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+	# randomly shuffle a dataset 
+	def shuffle(self, X, Y):
+		rands = random.sample(range(X.shape[0]),X.shape[0])
+		return X[rands], Y[rands]
+
+	# get the next batch based on x, y, and the iteration (based on batch_size)
+	def next_batch(self, X, Y, i, batch_size):
+		idx = i * batch_size
+		idx_n = i * batch_size + batch_size
+		return X[idx:idx_n], Y[idx:idx_n]
 
 
 	# USAGE:
@@ -83,9 +95,9 @@ class Target:
 
 
 
-	def train(self, dataset):
+	def train(self, X, Y, X_test, Y_test):
 		# define placeholders for input data
-		x = tf.placeholder(tf.float32, [None, self.n_input * self.n_input])
+		x = tf.placeholder(tf.float32, [None, self.n_input, self.n_input, 1])
 		y = tf.placeholder(tf.float32, [None, self.n_classes])
 
 		# define compute graph
@@ -105,12 +117,13 @@ class Target:
 		sess = tf.Session()
 		sess.run(init)
 
+		total_batch = int(X.shape[0] / self.batch_size)
+
 		for epoch in range(1, self.epochs + 1):
 			avg_cost = 0.
-			total_batch = int(dataset.train.num_examples/self.batch_size)
 
 			for i in range(total_batch):
-				batch_x, batch_y = dataset.train.next_batch(self.batch_size)
+				batch_x, batch_y = self.next_batch(X, Y, i, self.batch_size)
 				
 				_, c = sess.run([optimizer, cost], feed_dict={x: batch_x, y: batch_y})
 
@@ -126,9 +139,9 @@ class Target:
 
 		accs = []
 
-		total_test_batch = int(dataset.test.num_examples / self.batch_size)
+		total_test_batch = int(X_test.shape[0] / self.batch_size)
 		for i in range(total_test_batch):
-			batch_x, batch_y = dataset.test.next_batch(self.batch_size)
+			batch_x, batch_y = self.next_batch(X_test, Y_test, i, self.batch_size)
 			#batch_x = dataset.train.permute(batch_x, idxs)
 			accs.append(accuracy.eval({x: batch_x, y: batch_y}, session=sess))
 
@@ -137,10 +150,16 @@ class Target:
 
 
 
-
-# mnist = input_data.read_data_sets('../../MNIST_data', one_hot=True)
-# cnn = Target()
-# cnn.train(mnist)
+if __name__ == '__main__':
+	(X,y), (X_test,y_test) = mnist.load_data()
+	X = np.divide(X, 255.0)
+	X_test = np.divide(X_test, 255.0)
+	X = X.reshape(X.shape[0], 28, 28, 1)
+	X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
+	y = to_categorical(y, num_classes=10)
+	y_test = to_categorical(y_test, num_classes=10)
+	cnn = Target()
+	cnn.train(X, y, X_test, y_test)
 
 
 

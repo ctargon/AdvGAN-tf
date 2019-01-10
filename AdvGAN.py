@@ -11,7 +11,7 @@ from keras.utils import to_categorical
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import os
+import os, sys
 import random
 
 from generator import generator
@@ -117,7 +117,11 @@ def AdvGAN(X, y, X_test, y_test, epochs=50, batch_size=128):
 	sess.run(init)
 
 	# load the pretrained target model
-	saver.restore(sess, "./weights/target_model/model.ckpt")
+	try:
+		saver.restore(sess, "./weights/target_model/model.ckpt")
+	except:
+		print("make sure to train the target model first...")
+		sys.exit(1)
 
 	total_batches = int(X.shape[0] / batch_size)
 
@@ -240,7 +244,7 @@ X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 y_test = to_categorical(y_test, num_classes=10)
 
-# AdvGAN(X, y, batch_size=128, epochs=100)
+AdvGAN(X, y, X_test, y_test, batch_size=128, epochs=100)
 attack(X_test, y_test)
 
 
