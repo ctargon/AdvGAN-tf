@@ -98,7 +98,9 @@ def AdvGAN(X, y, X_test, y_test, epochs=50, batch_size=128):
 	t_vars = tf.trainable_variables()
 	f_vars = [var for var in t_vars if 'ModelC' in var.name]
 	d_vars = [var for var in t_vars if 'd_' in var.name]
-	g_vars = [var for var in t_vars if 'g_' in var.name]
+	g_vars = list(set([var for var in t_vars if 'g_' in var.name] + tf.get_collection("g_batch_norm_non_trainable")))
+
+	# g_vars_global = [var for var in tf.global_variables() if 'g_w' in var.name]
 
 	# define optimizers for discriminator and generator
 	update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -169,11 +171,12 @@ def AdvGAN(X, y, X_test, y_test, epochs=50, batch_size=128):
 	total_batches_test = int(X_test.shape[0] / batch_size)
 	for i in range(total_batches_test):
 		batch_x, batch_y = next_batch(X_test, y_test, i, batch_size)
-		acc = sess.run(accuracy, feed_dict={x_pl: batch_x, t: batch_y, is_training: False})
+		acc, x_pert = sess.run([accuracy, x_perturbed], feed_dict={x_pl: batch_x, t: batch_y, is_training: False})
 		accs.append(acc)
 
 	print('accuracy of test set: {}'.format(sum(accs) / len(accs)))
-
+	plt.imshow(np.squeeze(x_pert[0]), cmap='Greys_r')
+	plt.show()
 	print('finished training, saving weights')
 	g_saver.save(sess, "weights/generator/gen.ckpt")
 	d_saver.save(sess, "weights/discriminator/disc.ckpt")
@@ -197,17 +200,15 @@ def attack(X, y, batch_size=128):
 
 	t_vars = tf.trainable_variables()
 	f_vars = [var for var in t_vars if 'ModelC' in var.name]
-	d_vars = [var for var in t_vars if 'd_' in var.name]
-	g_vars = [var for var in t_vars if 'g_' in var.name]
+	g_vars = list(set([var for var in t_vars if 'g_' in var.name] + tf.get_collection("g_batch_norm_non_trainable")))
 
-	init  = tf.global_variables_initializer()
+	#init = tf.global_variables_initializer()
 
 	sess = tf.Session()
-	sess.run(init)
+	#sess.run(init)
 
 	f_saver = tf.train.Saver(f_vars)
 	g_saver = tf.train.Saver(g_vars)
-	d_saver = tf.train.Saver(d_vars)
 	f_saver.restore(sess, "./weights/target_model/model.ckpt")
 	g_saver.restore(sess, "./weights/generator/gen.ckpt")
 
@@ -224,7 +225,7 @@ def attack(X, y, batch_size=128):
 	total_batches_test = int(X.shape[0] / batch_size)
 	for i in range(total_batches_test):
 		batch_x, batch_y = next_batch(X, y, i, batch_size)
-		acc = sess.run(accuracy, feed_dict={x_pl: batch_x, t: batch_y, is_training: False})
+		acc, x_pert = sess.run([accuracy, x_perturbed], feed_dict={x_pl: batch_x, t: batch_y, is_training: False})
 		accs.append(acc)
 
 	print('accuracy of test set: {}'.format(sum(accs) / len(accs)))
@@ -244,7 +245,7 @@ X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 y_test = to_categorical(y_test, num_classes=10)
 
-AdvGAN(X, y, X_test, y_test, batch_size=128, epochs=100)
+AdvGAN(X, y, X_test, y_test, batch_size=128, epochs=120)
 attack(X_test, y_test)
 
 

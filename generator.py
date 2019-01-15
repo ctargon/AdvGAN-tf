@@ -46,7 +46,8 @@ def ResBlock(x, training, filters=32, kernel_size=3, strides=1):
 						padding="same",
 						activation=None)
 
-	conv1_norm = tf.layers.batch_normalization(conv1, training=training)
+	conv1_norm = tf.contrib.layers.batch_norm(conv1, is_training=training, \
+												variables_collections=["g_batch_norm_non_trainable"])
 
 	conv1_relu = tf.nn.relu(conv1_norm)
 
@@ -58,13 +59,14 @@ def ResBlock(x, training, filters=32, kernel_size=3, strides=1):
 						padding="same",
 						activation=None)
 
-	conv2_norm = tf.layers.batch_normalization(conv2, training=training)
+	conv2_norm = tf.contrib.layers.batch_norm(conv2, is_training=training, \
+												variables_collections=["g_batch_norm_non_trainable"])
 
 	return x + conv2_norm
 
 
 def generator(x, training):
-	with tf.variable_scope('g_weights'):
+	with tf.variable_scope('g_weights', reuse=tf.AUTO_REUSE):
 		input_layer = tf.reshape(x, [-1, 28, 28, 1])
 
 		# define first three conv + inst + relu layers
