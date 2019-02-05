@@ -47,10 +47,10 @@ class Target:
 	#	h_hidden: LIST of num. neurons per hidden layer
 	def ModelC(self, x):
 		with tf.variable_scope('ModelC', reuse=tf.AUTO_REUSE):
-			input_layer = tf.reshape(x, [-1, 28, 28, 1])
+			#input_layer = tf.reshape(x, [-1, 28, 28, 1])
 
 			conv1 = tf.layers.conv2d(
-								inputs=input_layer,
+								inputs=x,
 								filters=32,
 								kernel_size=3,
 								padding="same",
@@ -97,7 +97,7 @@ class Target:
 
 	def train(self, X, Y, X_test, Y_test):
 		# define placeholders for input data
-		x = tf.placeholder(tf.float32, [None, self.n_input, self.n_input, 1])
+		x = tf.placeholder(tf.float32, [None, X.shape[1], X.shape[2], X.shape[3]])
 		y = tf.placeholder(tf.float32, [None, self.n_classes])
 
 		# define compute graph
@@ -149,6 +149,7 @@ class Target:
 		sess.close() 
 
 
+from keras.datasets import cifar10
 
 if __name__ == '__main__':
 	(X,y), (X_test,y_test) = mnist.load_data()

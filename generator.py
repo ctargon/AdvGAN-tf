@@ -62,15 +62,16 @@ def ResBlock(x, training, filters=32, kernel_size=3, strides=1):
 	conv2_norm = tf.contrib.layers.batch_norm(conv2, is_training=training, \
 												variables_collections=["g_batch_norm_non_trainable"])
 
+
 	return x + conv2_norm
 
 
 def generator(x, training):
 	with tf.variable_scope('g_weights', reuse=tf.AUTO_REUSE):
-		input_layer = tf.reshape(x, [-1, 28, 28, 1])
+		# input_layer = tf.reshape(x, [-1, 28, 28, 1])
 
 		# define first three conv + inst + relu layers
-		c1 = ConvInstNormRelu(input_layer, filters=8, kernel_size=3, strides=1)
+		c1 = ConvInstNormRelu(x, filters=8, kernel_size=3, strides=1)
 		d1 = ConvInstNormRelu(c1, filters=16, kernel_size=3, strides=2)
 		d2 = ConvInstNormRelu(d1, filters=32, kernel_size=3, strides=2)
 
@@ -87,8 +88,8 @@ def generator(x, training):
 		# final layer block
 		out = tf.layers.conv2d_transpose(
 						inputs=u2,
-						filters=1, # or 3 if RGB image
-						kernel_size=6,
+						filters=x.get_shape()[-1].value, # or 3 if RGB image
+						kernel_size=3,
 						strides=1,
 						padding="same",
 						activation=None)
