@@ -145,6 +145,8 @@ class Target:
 			#batch_x = dataset.train.permute(batch_x, idxs)
 			accs.append(accuracy.eval({x: batch_x, y: batch_y}, session=sess))
 
+		print('accuracy of test set: {}'.format(sum(accs) / len(accs)))
+
 		saver.save(sess, "./weights/target_model/model.ckpt")
 		sess.close() 
 

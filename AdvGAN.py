@@ -39,7 +39,7 @@ def adv_loss(preds, labels, is_targeted):
 
 # loss function to influence the perturbation to be as close to 0 as possible
 def perturb_loss(preds, thresh=0.3):
-	zeros = tf.zeros_like(preds[0])
+	zeros = tf.zeros((tf.shape(preds)[0]))
 	return tf.reduce_mean(tf.maximum(zeros, tf.norm(tf.reshape(preds, (tf.shape(preds)[0], -1)), axis=1) - thresh))
 
 
@@ -204,10 +204,14 @@ def AdvGAN(X, y, X_test, y_test, epochs=50, batch_size=128, target=-1):
 
 
 
-def attack(X, y, batch_size=128, thresh=0.3):
+def attack(X, y, batch_size=128, thresh=0.3, target=-1):
 	x_pl = tf.placeholder(tf.float32, [None, X.shape[1], X.shape[2], X.shape[3]]) # image placeholder
 	t = tf.placeholder(tf.float32, [None, 10]) # target placeholder
 	is_training = tf.placeholder(tf.bool, [])
+
+	is_targeted = False
+	if target in range(0, y.shape[-1]):
+		is_targeted = True
 
 	perturb = tf.clip_by_value(generator(x_pl, is_training), -thresh, thresh)
 	x_perturbed = perturb + x_pl
@@ -244,7 +248,12 @@ def attack(X, y, batch_size=128, thresh=0.3):
 	total_batches_test = int(X.shape[0] / batch_size)
 	for i in range(total_batches_test):
 		batch_x, batch_y = next_batch(X, y, i, batch_size)
-		acc, x_pert = sess.run([accuracy, x_perturbed], feed_dict={x_pl: batch_x, t: batch_y, is_training: False})
+
+		if is_targeted:
+			targets = np.full((batch_y.shape[0],), target)
+			batch_y = np.eye(y.shape[-1])[targets]
+
+		acc, fake_l, x_pert = sess.run([accuracy, f_fake_probs, x_perturbed], feed_dict={x_pl: batch_x, t: batch_y, is_training: False})
 		accs.append(acc)
 
 	print('accuracy of test set: {}'.format(sum(accs) / len(accs)))
@@ -263,7 +272,7 @@ from keras.datasets import cifar10
 
 # read in mnist data
 (X,y), (X_test,y_test) = mnist.load_data()
-#(X, y), (X_test, y_test) = cifar10.load_data()
+# (X, y), (X_test, y_test) = cifar10.load_data()
 X = np.divide(X, 255.0)
 X_test = np.divide(X_test, 255.0)
 X = X.reshape(X.shape[0], 28, 28, 1)
