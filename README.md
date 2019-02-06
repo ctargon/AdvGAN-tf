@@ -1,7 +1,7 @@
 # AdvGAN-tf
 Tensorflow implementation of Generating Adversarial Examples with Adversarial Networks 
 
-##USAGE
+## USAGE
 Create a ```./weights``` directory as well as subdirectories ```./weights/generator```, ```./weights/discriminator```, ```./weights/target_model``` to contain the saved weights for each model.
 
 First run:
