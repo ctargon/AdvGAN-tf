@@ -106,7 +106,7 @@ def AdvGAN(X, y, X_test, y_test, epochs=50, batch_size=128, target=-1):
 	t_vars = tf.trainable_variables()
 	f_vars = [var for var in t_vars if 'ModelC' in var.name]
 	d_vars = [var for var in t_vars if 'd_' in var.name]
-	g_vars = list(set([var for var in t_vars if 'g_' in var.name] + tf.get_collection("g_batch_norm_non_trainable")))
+	g_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='g_weights')
 
 	# define optimizers for discriminator and generator
 	update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -223,17 +223,14 @@ def attack(X, y, batch_size=128, thresh=0.3, target=-1):
 
 	t_vars = tf.trainable_variables()
 	f_vars = [var for var in t_vars if 'ModelC' in var.name]
-	g_vars = list(set([var for var in t_vars if 'g_' in var.name] + tf.get_collection("g_batch_norm_non_trainable")))
-
-	# init = tf.global_variables_initializer()
+	g_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='g_weights')
 
 	sess = tf.Session()
-	# sess.run(init)
 
 	f_saver = tf.train.Saver(f_vars)
 	g_saver = tf.train.Saver(g_vars)
 	f_saver.restore(sess, "./weights/target_model/model.ckpt")
-	g_saver.restore(sess, "./weights/generator/gen.ckpt")
+	g_saver.restore(sess, tf.train.latest_checkpoint("./weights/generator/"))
 
 	rawpert, pert, fake_l, real_l = sess.run([perturb, x_perturbed, f_fake_probs, f_real_probs], \
 												feed_dict={x_pl: X[:32], \
@@ -264,8 +261,7 @@ def attack(X, y, batch_size=128, thresh=0.3, target=-1):
 	axarr[1,0].imshow(np.squeeze(X[4]), cmap='Greys_r')
 	axarr[1,1].imshow(np.squeeze(pert[4]), cmap='Greys_r')
 	plt.show()
-	# print(p.shape)
-	# plt.imshow(p[1,:,:],cmap="Greys_r")
+
 
 
 from keras.datasets import cifar10
@@ -280,8 +276,8 @@ X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 y = to_categorical(y, num_classes=10)
 y_test = to_categorical(y_test, num_classes=10)
 
-AdvGAN(X, y, X_test, y_test, batch_size=128, epochs=50)
-attack(X_test, y_test)
+AdvGAN(X, y, X_test, y_test, batch_size=128, epochs=50, target=-1)
+attack(X_test, y_test, target=-1)
 
 
 
